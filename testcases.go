@@ -21,10 +21,12 @@ type (
 		WantStatusCode   int    `csv:"want_status_code"`
 		WantResponseBody string `csv:"want_response_body"`
 		SkipFlag         bool   `csv:"skip_flag"`
+		SkipBodyCheck    bool   `csv:"skip_body_check"`
 
 		gotStatusCode   int
 		gotResponseBody string
-		// ValidateResponseFunc // TODO: later
+
+		ValidateResponseFunc func(string) error
 
 		*testing.T
 	}
@@ -53,19 +55,34 @@ func Load(filePath string, delim rune, hasHeader bool) ([]TestCase, error) {
 	return testcases, nil
 }
 
-func (tc *TestCase) RunCheckStatusCode() error {
+func (tc *TestCase) RunCheck() error {
 	if tc.SkipFlag {
 		tc.Log("Skipped test case:", tc.Name)
 		return nil
 	}
 
-	err := tc.executeHttp()
-	if err != nil {
-		return fmt.Errorf("RunCheckStatusCode() executeHttp() error: %v", err)
+	if err := tc.executeHttp(); err != nil {
+		return fmt.Errorf("RunCheck() error: %v", err)
 	}
 
 	if tc.WantStatusCode != tc.gotStatusCode {
-		return fmt.Errorf("RunCheckStatusCode() Status Code: wanted %d but got %d", tc.WantStatusCode, tc.gotStatusCode)
+		return fmt.Errorf("RunCheck() Status Code mismatch: wanted %d but got %d", tc.WantStatusCode, tc.gotStatusCode)
+	}
+
+	if tc.SkipBodyCheck {
+		return nil
+	}
+
+	// if testcase has the want response body, use it to validate response body
+	if tc.WantResponseBody != "" && tc.WantResponseBody != tc.gotResponseBody {
+		return fmt.Errorf("RunCheck() Response body mismatch: wanted %s but got %s", tc.WantResponseBody, tc.gotResponseBody)
+	}
+
+	// if validation function is provided, use it to validate response body
+	if tc.ValidateResponseFunc != nil {
+		if err := tc.ValidateResponseFunc(tc.gotResponseBody); err != nil {
+			return fmt.Errorf("RunCheck() Response body mismatch: wanted %s but got %s", tc.WantResponseBody, tc.gotResponseBody)
+		}
 	}
 
 	return nil
@@ -81,6 +98,10 @@ func (tc *TestCase) executeHttp() error {
 	req, err := http.NewRequest(tc.RequestMethod, urlString, bytes.NewBufferString(tc.RequestBody))
 	if err != nil {
 		return fmt.Errorf("executeHttp() http.NewRequest() error: %v", err)
+	}
+
+	for k, v := range tc.RequestHeaders {
+		req.Header.Set(k, v)
 	}
 
 	client := &http.Client{}

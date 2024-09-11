@@ -1,2 +1,3 @@
-name,request_path,request_method,request_body,want_status_code,want_response_body,skip_flag,ref#,notes
-google get,https://www.google.com/,GET,"",200,?,0,1.a.1,test notes
+name,request_path,request_method,request_body,want_status_code,want_response_body,skip_flag,skip_body_check,ref#,notes
+google get 1 with status code only validation,https://www.google.com/,GET,"",200,,0,0,1.a.1,test notes
+google get 2 with response body validation but expected body is not passed,https://www.google.com/,GET,"",200,,0,1,1.a.1,test notes

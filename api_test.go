@@ -12,7 +12,8 @@ func Test1(t *testing.T) {
 
 	for _, tc := range tcs {
 		tc.T = t
-		err := tc.RunCheckStatusCode()
+
+		err := tc.RunCheck()
 		if err != nil {
 			tc.Errorf(`testcase "%s" failed: %s`, tc.Name, err)
 		}
