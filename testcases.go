@@ -55,7 +55,8 @@ func Load(filePath string, delim rune, hasHeader bool) ([]TestCase, error) {
 	return testcases, nil
 }
 
-func (tc *TestCase) RunCheck() error {
+// Execute executes the testcase
+func (tc *TestCase) Execute() error {
 	if tc.SkipFlag {
 		tc.Log("Skipped test case:", tc.Name)
 		return nil
@@ -64,7 +65,12 @@ func (tc *TestCase) RunCheck() error {
 	if err := tc.executeHttp(); err != nil {
 		return fmt.Errorf("RunCheck() error: %v", err)
 	}
+	return nil
+}
 
+// Check verifies the executed testcase.
+// returns error if test case fail
+func (tc *TestCase) Check() error {
 	if tc.WantStatusCode != tc.gotStatusCode {
 		return fmt.Errorf("RunCheck() Status Code mismatch: wanted %d but got %d", tc.WantStatusCode, tc.gotStatusCode)
 	}
@@ -92,7 +98,6 @@ func (tc *TestCase) executeHttp() error {
 	urlString := fmt.Sprintf("%s%s", baseURL, tc.RequestPath)
 	if baseURL == "" {
 		urlString = tc.RequestPath // i.e. the complete path is provided in the test case
-
 	}
 
 	req, err := http.NewRequest(tc.RequestMethod, urlString, bytes.NewBufferString(tc.RequestBody))
